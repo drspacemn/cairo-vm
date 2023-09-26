@@ -35,6 +35,15 @@ pub struct PublicMemoryPage {
     pub size: usize,
 }
 
+impl From<(usize, usize)> for PublicMemoryPage {
+    fn from(value: (usize, usize)) -> Self {
+        PublicMemoryPage {
+            start: value.0,
+            size: value.1,
+        }
+    }
+}
+
 // HashMap value based on starknet/core/os/output.cairo usage
 pub type Attributes = HashMap<String, Vec<usize>>;
 pub type Pages = HashMap<usize, PublicMemoryPage>;
@@ -137,7 +146,7 @@ mod serde_impl {
 
         for value in values {
             match value {
-                MaybeRelocatable::RelocatableValue(_) => todo!(),
+                MaybeRelocatable::RelocatableValue(_) => continue,
                 MaybeRelocatable::Int(x) => {
                     seq_serializer.serialize_element(&Felt252Wrapper(x))?;
                 }
@@ -266,11 +275,7 @@ mod test {
         // Serializes Address 8 Byte(little endian):
         for (i, expected_addr) in addrs.into_iter().enumerate() {
             let shift = shift_len * i;
-            assert_eq!(
-                &mem_str[shift..shift + shift_addr],
-                expected_addr.1,
-                "addr mismatch({i}): {mem_str:?}",
-            );
+            assert_eq!(&mem_str[shift..shift + shift_addr], expected_addr.1);
         }
 
         // Serializes Int(little endian):
@@ -278,8 +283,7 @@ mod test {
         // 0    | num
         assert_eq!(
             &mem_str[shift_addr..shift_addr + shift_field],
-            "d204000000000000000000000000000000000000000000000000000000000000",
-            "value mismatch: {mem_str:?}",
+            "d204000000000000000000000000000000000000000000000000000000000000"
         );
         // Serializes RelocatableValue(little endian):
         // 1bit |   SEGMENT_BITS |   OFFSET_BITS
@@ -287,8 +291,7 @@ mod test {
         let shift_first_relocatable = shift_len * 3 + shift_addr;
         assert_eq!(
             &mem_str[shift_first_relocatable..shift_first_relocatable + shift_field],
-            "0200000000800000000000000000000000000000000000000000000000000080",
-            "value mismatch: {mem_str:?}",
+            "0200000000800000000000000000000000000000000000000000000000000080"
         );
     }
 }
